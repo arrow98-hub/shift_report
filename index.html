@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shift Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Light theme (default) ── */
+  :root, [data-theme="light"] {
+    --blue: #1a56a0;
+    --blue-dark: #144380;
+    --blue-light: #e6f1fb;
+    --blue-text: #1a56a0;
+    --bg: #ffffff;
+    --bg-secondary: #f4f6f9;
+    --bg-tertiary: #edf0f4;
+    --text: #1a1a1a;
+    --text-secondary: #4a4a4a;
+    --text-muted: #8a8a8a;
+    --border: rgba(0,0,0,0.10);
+    --border-strong: rgba(0,0,0,0.18);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --danger: #d93f3f;
+    --success: #2a9d6e;
+  }
+
+  /* ── Dark theme ── */
+  [data-theme="dark"] {
+    --blue: #4b8fd4;
+    --blue-dark: #6aa3e0;
+    --blue-light: #0c2a4a;
+    --blue-text: #7ab8f5;
+    --bg: #111214;
+    --bg-secondary: #1a1c1f;
+    --bg-tertiary: #222428;
+    --text: #f0f0f0;
+    --text-secondary: #aaa;
+    --text-muted: #666;
+    --border: rgba(255,255,255,0.09);
+    --border-strong: rgba(255,255,255,0.18);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --danger: #e24b4a;
+    --success: #2a9d6e;
+  }
+
+  body {
+    font-family: 'Lexend', 'Inter', system-ui, sans-serif;
+    background: var(--bg-tertiary);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .app-shell { max-width: 780px; margin: 0 auto; padding: 2rem 1rem 6rem; }
+
+  /* ── Header ── */
+  .app-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 2rem; padding-bottom: 1.25rem;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .app-header h1 { font-size: 20px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+  .app-header p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .header-right { display: flex; gap: 8px; align-items: center; }
+
+  /* ── DB Status badge ── */
+  .db-status { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 4px 10px; border-radius: 20px; border: 0.5px solid var(--border); color: var(--text-muted); background: var(--bg-secondary); }
+  .db-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+  .db-dot.connected { background: var(--success); }
+  .db-dot.error { background: var(--danger); }
+
+  /* ── Theme toggle ── */
+  .theme-toggle {
+    width: 32px; height: 32px;
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+    cursor: pointer; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .theme-toggle:hover { background: var(--bg); color: var(--text); }
+
+  /* ── Setup button ── */
+  .toggle-config {
+    background: var(--bg-secondary); border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius); cursor: pointer; color: var(--text-muted);
+    font-size: 12px; display: flex; align-items: center; gap: 5px;
+    font-family: inherit; padding: 5px 10px; transition: background 0.15s;
+  }
+  .toggle-config:hover { background: var(--bg); color: var(--text); }
+
+  /* ── Modal overlay (for setup PIN) ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 300;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg); border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius-lg); padding: 2rem;
+    width: min(360px, 92vw); box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+  }
+  .modal h3 { font-size: 15px; font-weight: 500; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .modal p { font-size: 12px; color: var(--text-muted); margin-bottom: 1.25rem; }
+  .modal input {
+    width: 100%; padding: 9px 12px;
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    background: var(--bg-secondary); color: var(--text);
+    font-size: 14px; font-family: inherit; letter-spacing: 3px;
+    text-align: center; margin-bottom: 10px;
+  }
+  .modal input:focus { outline: none; border-color: var(--blue); }
+  .modal-actions { display: flex; gap: 8px; }
+  .modal-actions button { flex: 1; padding: 9px; border-radius: var(--radius); font-size: 13px; cursor: pointer; font-family: inherit; border: 0.5px solid var(--border-strong); }
+  .modal-btn-primary { background: var(--blue); color: #fff; border-color: var(--blue) !important; }
+  .modal-btn-primary:hover { background: var(--blue-dark); }
+  .modal-btn-cancel { background: var(--bg-secondary); color: var(--text-secondary); }
+  .modal-btn-cancel:hover { background: var(--bg); }
+  .modal-error { font-size: 12px; color: var(--danger); margin-bottom: 8px; display: none; }
+
+  /* ── Config panel ── */
+  .config-panel {
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.75rem;
+  }
+  .config-panel h3 { font-size: 13px; font-weight: 500; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+  .config-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .config-field label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .config-field input {
+    width: 100%; padding: 7px 10px;
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    background: var(--bg-secondary); color: var(--text);
+    font-size: 12px; font-family: inherit;
+  }
+  .config-field input:focus { outline: none; border-color: var(--blue); }
+  .config-note { font-size: 11px; color: var(--text-muted); margin-top: 10px; line-height: 1.6; }
+  .config-note a { color: var(--blue-text); }
+  .config-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .btn-save-config {
+    padding: 7px 16px; background: var(--blue); border: none;
+    border-radius: var(--radius); color: #fff; font-size: 12px;
+    font-weight: 500; cursor: pointer; font-family: inherit;
+  }
+  .btn-save-config:hover { background: var(--blue-dark); }
+  .btn-change-pin {
+    padding: 7px 16px; background: var(--bg-secondary);
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    color: var(--text-secondary); font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .btn-change-pin:hover { background: var(--bg-tertiary); }
+
+  /* ── Shift selector ── */
+  .shift-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; }
+  .shift-btn {
+    padding: 12px 8px;
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg);
+    background: var(--bg); color: var(--text-secondary);
+    font-size: 12px; font-weight: 400; cursor: pointer;
+    text-align: center; transition: all 0.15s; font-family: inherit; line-height: 1.5;
+  }
+  .shift-btn:hover { background: var(--bg-secondary); }
+  .shift-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .shift-icon { font-size: 18px; display: block; margin-bottom: 4px; }
+  .shift-time { font-size: 10px; opacity: 0.75; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 1.25rem;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* ── Field rows ── */
+  .field-row { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 12px; }
+  .field-row:last-child { margin-bottom: 0; }
+  .field-label {
+    font-size: 13px; color: var(--text-secondary); min-width: 200px;
+    padding-top: 8px; display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  }
+  .field-label .req { color: var(--blue); font-size: 10px; }
+  .field-input { flex: 1; min-width: 0; }
+  .field-input input[type=text],
+  .field-input input[type=date],
+  .field-input input[type=number],
+  .field-input select,
+  .field-input textarea {
+    width: 100%; padding: 8px 10px;
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    background: var(--bg-secondary); color: var(--text);
+    font-size: 13px; font-family: inherit; transition: border-color 0.15s;
+  }
+  .field-input input:focus, .field-input select:focus, .field-input textarea:focus { outline: none; border-color: var(--blue); }
+  .field-input textarea { resize: vertical; min-height: 90px; line-height: 1.65; }
+  .computed-day { font-size: 12px; color: var(--blue-text); font-weight: 500; margin-top: 5px; min-height: 16px; }
+
+  /* ── Expandable entry blocks ── */
+  .expand-block { margin-bottom: 14px; }
+  .expand-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .expand-label { font-size: 13px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 7px; }
+  .expand-label .req { color: var(--blue); font-size: 10px; }
+  .entry-count { font-size: 11px; color: var(--text-muted); background: var(--bg-tertiary); padding: 2px 8px; border-radius: 20px; }
+
+  .entries-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .entry-card {
+    background: var(--bg-secondary); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 10px 12px; position: relative;
+  }
+  .entry-num { font-size: 10px; font-weight: 500; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.5px; }
+  .entry-grid { display: grid; gap: 8px; padding-right: 24px; }
+  .entry-grid.g1 { grid-template-columns: 1fr; }
+  .entry-grid.g2 { grid-template-columns: 1fr 1fr; }
+  .entry-grid.g3 { grid-template-columns: 1fr 1fr 1fr; }
+  .entry-field-label { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
+  .entry-card input, .entry-card select {
+    width: 100%; padding: 6px 8px;
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    background: var(--bg); color: var(--text); font-size: 12px; font-family: inherit;
+  }
+  .entry-card input:focus, .entry-card select:focus { outline: none; border-color: var(--blue); }
+  .remove-entry {
+    position: absolute; top: 8px; right: 8px;
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted); padding: 2px; line-height: 1; font-size: 14px;
+  }
+  .remove-entry:hover { color: var(--danger); }
+
+  .add-entry-btn {
+    display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+    border: 0.5px dashed var(--border-strong); border-radius: var(--radius);
+    background: none; color: var(--text-muted); font-size: 12px;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .add-entry-btn:hover { background: var(--bg-secondary); border-style: solid; color: var(--text); }
+
+  .divider { height: 0.5px; background: var(--border); margin: 0.75rem 0; }
+
+  /* ── Metrics grid ── */
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .metric-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+  .metric-label .req { color: var(--blue); font-size: 10px; }
+  .metrics-grid input[type=number] {
+    width: 100%; padding: 8px 10px;
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    background: var(--bg-secondary); color: var(--text); font-size: 13px; font-family: inherit;
+  }
+  .metrics-grid input:focus { outline: none; border-color: var(--blue); }
+  .prefix-wrap { position: relative; }
+  .prefix-wrap input { padding-left: 20px; }
+  .prefix-sym { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text-muted); pointer-events: none; }
+  .metric-computed { font-size: 11px; color: var(--blue-text); font-weight: 500; margin-top: 3px; }
+
+  /* ── NA section ── */
+  .na-card {
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-left: 3px solid var(--blue); border-radius: var(--radius-lg);
+    padding: 1.25rem; margin-bottom: 1rem;
+  }
+  .na-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--blue-light); color: var(--blue-text);
+    font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px; margin-bottom: 1rem;
+  }
+
+  /* ── Action bar ── */
+  .action-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--bg); border-top: 0.5px solid var(--border);
+    padding: 12px 1rem; display: flex; gap: 10px; justify-content: center; z-index: 50;
+  }
+  .action-bar .inner { display: flex; gap: 10px; max-width: 780px; width: 100%; }
+
+  .btn-primary {
+    flex: 1; padding: 11px 18px; background: var(--blue);
+    border: none; border-radius: var(--radius); color: #fff; font-size: 13px;
+    font-weight: 500; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s;
+  }
+  .btn-primary:hover { background: var(--blue-dark); }
+  .btn-secondary {
+    flex: 1; padding: 11px 18px; background: var(--bg);
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    color: var(--text-secondary); font-size: 13px; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s;
+  }
+  .btn-secondary:hover { background: var(--bg-secondary); }
+  .btn-icon {
+    padding: 11px 14px; background: var(--bg); border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius); color: var(--text-secondary); cursor: pointer;
+    font-size: 13px; font-family: inherit; display: flex; align-items: center; gap: 6px; transition: background 0.15s;
+  }
+  .btn-icon:hover { background: var(--bg-secondary); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%);
+    padding: 10px 20px; border-radius: var(--radius);
+    font-size: 13px; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s; z-index: 200; white-space: nowrap;
+  }
+  .toast.success { background: var(--success); color: #fff; }
+  .toast.error { background: var(--danger); color: #fff; }
+  .toast.show { opacity: 1; }
+
+  /* ── History drawer ── */
+  .drawer-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35); z-index: 100; align-items: stretch; justify-content: flex-end;
+  }
+  .drawer-overlay.open { display: flex; }
+  .drawer {
+    width: min(420px, 95vw); background: var(--bg);
+    border-left: 0.5px solid var(--border-strong); display: flex; flex-direction: column; overflow: hidden;
+  }
+  .drawer-header {
+    padding: 1.25rem; border-bottom: 0.5px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .drawer-header h2 { font-size: 16px; font-weight: 500; }
+  .drawer-close { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 18px; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 1rem; }
+
+  .history-item { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; }
+  .hi-top { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .hi-name { font-size: 13px; font-weight: 500; }
+  .hi-shift { font-size: 11px; color: var(--text-muted); }
+  .hi-date { font-size: 11px; color: var(--text-muted); }
+  .hi-preview { font-size: 11px; color: var(--text-muted); white-space: pre-wrap; max-height: 60px; overflow: hidden; margin: 6px 0; line-height: 1.5; }
+  .hi-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .hi-btn {
+    padding: 4px 10px; border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+    background: none; font-size: 11px; cursor: pointer; color: var(--text-secondary);
+    font-family: inherit; display: flex; align-items: center; gap: 4px;
+  }
+  .hi-btn:hover { background: var(--bg-secondary); }
+  .hi-btn.del:hover { color: var(--danger); border-color: var(--danger); }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
+  .empty-state i { font-size: 32px; display: block; margin-bottom: 10px; opacity: 0.4; }
+
+  @media (max-width: 560px) {
+    .metrics-grid { grid-template-columns: 1fr; }
+    .entry-grid.g3 { grid-template-columns: 1fr 1fr; }
+    .field-row { flex-direction: column; gap: 4px; }
+    .field-label { min-width: unset; padding-top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- Header -->
+  <div class="app-header">
+    <div>
+      <h1>🏨 Shift Report</h1>
+      <p>Daily report — fill all required fields before copying</p>
+    </div>
+    <div class="header-right">
+      <div class="db-status" id="db-status">
+        <span class="db-dot" id="db-dot"></span>
+        <span id="db-label">No DB</span>
+      </div>
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+        <i class="ti ti-moon" id="theme-icon"></i>
+      </button>
+      <button class="toggle-config" onclick="openSetupAuth()">
+        <i class="ti ti-settings"></i> Setup
+      </button>
+    </div>
+  </div>
+
+  <!-- Setup PIN modal -->
+  <div class="modal-overlay" id="pin-modal">
+    <div class="modal">
+      <h3><i class="ti ti-lock"></i> Setup access</h3>
+      <p>Enter the admin PIN to access configuration settings.</p>
+      <div class="modal-error" id="pin-error">Incorrect PIN. Try again.</div>
+      <input type="password" id="pin-input" placeholder="• • • •" maxlength="8" onkeydown="if(event.key==='Enter')checkPin()">
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" onclick="closePinModal()">Cancel</button>
+        <button class="modal-btn-primary" onclick="checkPin()">Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config panel (hidden until PIN unlocked) -->
+  <div class="config-panel" id="config-panel" style="display:none">
+    <h3><i class="ti ti-database"></i> Supabase connection</h3>
+    <div class="config-grid">
+      <div class="config-field">
+        <label>Project URL</label>
+        <input type="text" id="cfg-url" placeholder="https://xxxxxxxx.supabase.co">
+      </div>
+      <div class="config-field">
+        <label>Anon public key</label>
+        <input type="text" id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+      </div>
+    </div>
+    <p class="config-note">
+      Get these from your Supabase project → Settings → API.<br>
+      Stored only in this browser's local storage.
+      <a href="https://supabase.com" target="_blank">supabase.com ↗</a>
+    </p>
+    <div class="config-actions">
+      <button class="btn-save-config" onclick="saveConfig()">Save & test connection</button>
+      <button class="btn-change-pin" onclick="openChangePinModal()"><i class="ti ti-key" style="font-size:12px"></i> Change PIN</button>
+    </div>
+  </div>
+
+  <!-- Change PIN modal -->
+  <div class="modal-overlay" id="change-pin-modal">
+    <div class="modal">
+      <h3><i class="ti ti-key"></i> Change PIN</h3>
+      <p>Set a new PIN for the Setup panel. Default is <strong>1234</strong>.</p>
+      <div class="modal-error" id="change-pin-error">PINs don't match. Try again.</div>
+      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">New PIN</label>
+      <input type="password" id="new-pin-1" placeholder="New PIN" maxlength="8" style="margin-bottom:8px">
+      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Confirm PIN</label>
+      <input type="password" id="new-pin-2" placeholder="Confirm PIN" maxlength="8">
+      <div class="modal-actions" style="margin-top:10px">
+        <button class="modal-btn-cancel" onclick="closeChangePinModal()">Cancel</button>
+        <button class="modal-btn-primary" onclick="saveNewPin()">Save PIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shift Selector -->
+  <div class="shift-selector">
+    <button class="shift-btn" id="btn-morning" onclick="setShift('morning')">
+      <span class="shift-icon">🌅</span>Morning<br><span class="shift-time">7:00 AM – 3:00 PM</span>
+    </button>
+    <button class="shift-btn" id="btn-afternoon" onclick="setShift('afternoon')">
+      <span class="shift-icon">☀️</span>Afternoon<br><span class="shift-time">3:00 PM – 11:00 PM</span>
+    </button>
+    <button class="shift-btn" id="btn-night" onclick="setShift('night')">
+      <span class="shift-icon">🌙</span>Night Audit<br><span class="shift-time">11:00 PM – 7:00 AM</span>
+    </button>
+  </div>
+
+  <!-- General Info -->
+  <div class="card">
+    <div class="card-title"><i class="ti ti-user-circle"></i> General info</div>
+    <div class="field-row">
+      <div class="field-label"><i class="ti ti-user"></i> Agent on duty <span class="req">●</span></div>
+      <div class="field-input"><input type="text" id="agent" placeholder="Your full name"></div>
+    </div>
+    <div class="field-row">
+      <div class="field-label"><i class="ti ti-calendar"></i> Date <span class="req">●</span></div>
+      <div class="field-input">
+        <input type="date" id="report-date" oninput="updateDay()">
+        <div class="computed-day" id="computed-day"></div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-label"><i class="ti ti-notes"></i> Comments <span class="req">●</span></div>
+      <div class="field-input">
+        <textarea id="comments" placeholder="Describe any events, issues, or notes from your shift…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incidents -->
+  <div class="card">
+    <div class="card-title"><i class="ti ti-clipboard-list"></i> Incidents & transactions</div>
+    <div id="incident-blocks"></div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="card">
+    <div class="card-title"><i class="ti ti-chart-bar"></i> Metrics</div>
+    <div class="metrics-grid">
+      <div><div class="metric-label"><i class="ti ti-door-enter"></i> Walk-ins <span class="req">●</span></div><input type="number" id="walkins" min="0" placeholder="0"></div>
+      <div><div class="metric-label"><i class="ti ti-award"></i> Wyndham rewards arrivals <span class="req">●</span></div><input type="number" id="wyndham" min="0" placeholder="0"></div>
+      <div><div class="metric-label"><i class="ti ti-sun"></i> Day-use <span class="req">●</span></div><input type="number" id="dayuse" min="0" placeholder="0"></div>
+      <div><div class="metric-label"><i class="ti ti-ticket"></i> Resort pass <span class="req">●</span></div><input type="number" id="resortpass" min="0" placeholder="0"></div>
+      <div><div class="metric-label"><i class="ti ti-brush"></i> Vacant/dirty rooms <span class="req">●</span></div><input type="number" id="vacantdirty" min="0" placeholder="0"></div>
+      <div><div class="metric-label"><i class="ti ti-tools"></i> Out of order <span class="req">●</span></div><input type="number" id="outoforder" min="0" placeholder="0"></div>
+      <div><div class="metric-label"><i class="ti ti-building"></i> Total rooms available <span class="req">●</span></div><input type="number" id="totalrooms" min="0" placeholder="0" oninput="calcOcc()"></div>
+      <div><div class="metric-label"><i class="ti ti-arrow-down-circle"></i> Arrivals tonight <span class="req">●</span></div><input type="number" id="arrivals" min="0" placeholder="0" oninput="calcOcc()"></div>
+      <div><div class="metric-label"><i class="ti ti-arrow-up-circle"></i> Departures today <span class="req">●</span></div><input type="number" id="departures" min="0" placeholder="0"></div>
+      <div><div class="metric-label"><i class="ti ti-bed"></i> Stayovers <span class="req">●</span></div><input type="number" id="stayovers" min="0" placeholder="0" oninput="calcOcc()"></div>
+      <div>
+        <div class="metric-label"><i class="ti ti-chart-pie"></i> Today's occupancy <span class="req">●</span></div>
+        <input type="number" id="occupancy" min="0" max="100" step="0.1" placeholder="0">
+        <div class="metric-computed" id="occ-auto"></div>
+      </div>
+      <div>
+        <div class="metric-label"><i class="ti ti-currency-dollar"></i> Expected ADR <span class="req">●</span></div>
+        <div class="prefix-wrap"><span class="prefix-sym">$</span><input type="number" id="adr" min="0" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div style="grid-column: 1 / -1">
+        <div class="metric-label"><i class="ti ti-tag"></i> Today's rate <span class="req">●</span></div>
+        <div class="prefix-wrap" style="max-width:200px"><span class="prefix-sym">$</span><input type="number" id="todayrate" min="0" step="0.01" placeholder="0.00"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Night Audit — No shows -->
+  <div id="na-section" style="display:none">
+    <div class="na-card">
+      <div class="card-title" style="margin-bottom:.75rem"><i class="ti ti-moon"></i> Night audit — no shows</div>
+      <div class="na-badge"><i class="ti ti-moon"></i> NA only</div>
+      <div class="entries-list" id="list-noshows"></div>
+      <button class="add-entry-btn" onclick="addEntry('noshows')"><i class="ti ti-plus"></i> Add no-show</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Fixed action bar -->
+<div class="action-bar">
+  <div class="inner">
+    <button class="btn-primary" onclick="copyReport()"><i class="ti ti-copy"></i> Copy report</button>
+    <button class="btn-secondary" onclick="confirmReset()"><i class="ti ti-refresh"></i> Clear all</button>
+    <button class="btn-icon" onclick="openHistory()"><i class="ti ti-history"></i> History</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- History drawer -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="overlayClick(event)">
+  <div class="drawer" id="drawer">
+    <div class="drawer-header">
+      <h2>📋 Report history</h2>
+      <button class="drawer-close" onclick="closeHistory()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="drawer-body" id="drawer-body">
+      <div class="empty-state"><i class="ti ti-clipboard-x"></i>No saved reports yet</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  SUPABASE CONFIG  — set via Setup panel
+// ─────────────────────────────────────────────
+const CONFIG = {
+  get supabaseUrl() { return localStorage.getItem('sb_url') || ''; },
+  get supabaseKey() { return localStorage.getItem('sb_key') || ''; }
+};
+
+// ── Default PIN (change via Setup > Change PIN) ──
+const DEFAULT_PIN = '1234';
+function getPin() { return localStorage.getItem('setup_pin') || DEFAULT_PIN; }
+
+// ── State ──────────────────────────────────────
+let currentShift = 'morning';
+const entries = { ccDeclined:[], earlyCheckout:[], depositRefund:[], cancellation:[], reservations:[], roomMoves:[], noshows:[] };
+
+// ── Field definitions ──────────────────────────
+const BLOCKS = [
+  { key:'ccDeclined',    emoji:'💳', label:'CC Declined',
+    fields:[{name:'guestName',label:'Guest name',type:'text'},{name:'thirdParty',label:'Third party',type:'text'},{name:'roomType',label:'Room type',type:'select',options:['','RM1','RM2','AC1']}] },
+  { key:'earlyCheckout', emoji:'🚪', label:'Early check-out',
+    fields:[{name:'room',label:'Room number',type:'text'}] },
+  { key:'depositRefund', emoji:'💵', label:'Deposit to refund',
+    fields:[{name:'guestName',label:'Guest name',type:'text'},{name:'confirmNum',label:'Confirmation #',type:'text'}] },
+  { key:'cancellation',  emoji:'❌', label:'Cancellation',
+    fields:[{name:'guestName',label:'Guest name',type:'text'},{name:'confirmNum',label:'Confirmation #',type:'text'}] },
+  { key:'reservations',  emoji:'📝', label:'Reservations created',
+    fields:[{name:'guestName',label:'Guest name',type:'text'},{name:'confirmNum',label:'Confirmation #',type:'text'},{name:'thirdParty',label:'Third party',type:'text'}] },
+  { key:'roomMoves',     emoji:'🔄', label:'Room moves',
+    fields:[{name:'fromRoom',label:'From room',type:'text'},{name:'toRoom',label:'To room',type:'text'}] }
+];
+const NOSHOW_FIELDS = [{name:'guestName',label:'Guest name',type:'text'},{name:'room',label:'Room',type:'text'},{name:'confirmNum',label:'Confirmation #',type:'text'}];
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+// ── Init ───────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Theme
+  const saved = localStorage.getItem('theme') || 'light';
+  setTheme(saved);
+  // Date
+  const today = new Date();
+  document.getElementById('report-date').value = today.toISOString().split('T')[0];
+  updateDay();
+  // Render
+  renderIncidentBlocks();
+  setShift('morning');
+  loadConfigInputs();
+  checkConnection();
+});
+
+// ── Theme ──────────────────────────────────────
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('theme', t);
+  const icon = document.getElementById('theme-icon');
+  icon.className = t === 'dark' ? 'ti ti-sun' : 'ti ti-moon';
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  setTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+// ── PIN / Setup auth ───────────────────────────
+function openSetupAuth() {
+  const panel = document.getElementById('config-panel');
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-error').style.display = 'none';
+  document.getElementById('pin-modal').classList.add('open');
+  setTimeout(() => document.getElementById('pin-input').focus(), 100);
+}
+function closePinModal() { document.getElementById('pin-modal').classList.remove('open'); }
+function checkPin() {
+  const entered = document.getElementById('pin-input').value;
+  if (entered === getPin()) {
+    closePinModal();
+    document.getElementById('config-panel').style.display = 'block';
+    loadConfigInputs();
+  } else {
+    document.getElementById('pin-error').style.display = 'block';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-input').focus();
+  }
+}
+function openChangePinModal() {
+  document.getElementById('new-pin-1').value = '';
+  document.getElementById('new-pin-2').value = '';
+  document.getElementById('change-pin-error').style.display = 'none';
+  document.getElementById('change-pin-modal').classList.add('open');
+  setTimeout(() => document.getElementById('new-pin-1').focus(), 100);
+}
+function closeChangePinModal() { document.getElementById('change-pin-modal').classList.remove('open'); }
+function saveNewPin() {
+  const p1 = document.getElementById('new-pin-1').value;
+  const p2 = document.getElementById('new-pin-2').value;
+  if (!p1 || p1 !== p2) { document.getElementById('change-pin-error').style.display = 'block'; return; }
+  localStorage.setItem('setup_pin', p1);
+  closeChangePinModal();
+  showToast('🔐 PIN updated', 'success');
+}
+
+// ── Config / Supabase ──────────────────────────
+function loadConfigInputs() {
+  document.getElementById('cfg-url').value = localStorage.getItem('sb_url') || '';
+  document.getElementById('cfg-key').value = localStorage.getItem('sb_key') || '';
+}
+function saveConfig() {
+  const url = document.getElementById('cfg-url').value.trim();
+  const key = document.getElementById('cfg-key').value.trim();
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  checkConnection();
+}
+async function checkConnection() {
+  const dot = document.getElementById('db-dot');
+  const lbl = document.getElementById('db-label');
+  if (!CONFIG.supabaseUrl || !CONFIG.supabaseKey) { dot.className='db-dot'; lbl.textContent='No DB'; return; }
+  try {
+    const r = await fetch(`${CONFIG.supabaseUrl}/rest/v1/reports?limit=1`, {
+      headers: { apikey: CONFIG.supabaseKey, Authorization: `Bearer ${CONFIG.supabaseKey}` }
+    });
+    if (r.ok) { dot.className='db-dot connected'; lbl.textContent='Connected'; }
+    else { dot.className='db-dot error'; lbl.textContent='DB error'; }
+  } catch { dot.className='db-dot error'; lbl.textContent='Offline'; }
+}
+async function saveToSupabase(reportText, reportData) {
+  if (!CONFIG.supabaseUrl || !CONFIG.supabaseKey) return false;
+  const dateVal = document.getElementById('report-date').value;
+  try {
+    const r = await fetch(`${CONFIG.supabaseUrl}/rest/v1/reports`, {
+      method: 'POST',
+      headers: { apikey: CONFIG.supabaseKey, Authorization: `Bearer ${CONFIG.supabaseKey}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ agent: document.getElementById('agent').value||'Unknown', shift: currentShift, report_date: dateVal||new Date().toISOString().split('T')[0], day_name: computeDay(dateVal), full_text: reportText, data: reportData })
+    });
+    return r.ok;
+  } catch { return false; }
+}
+async function loadFromSupabase() {
+  if (!CONFIG.supabaseUrl || !CONFIG.supabaseKey) return null;
+  try {
+    const r = await fetch(`${CONFIG.supabaseUrl}/rest/v1/reports?order=created_at.desc&limit=60`, {
+      headers: { apikey: CONFIG.supabaseKey, Authorization: `Bearer ${CONFIG.supabaseKey}` }
+    });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+async function deleteFromSupabase(id) {
+  if (!CONFIG.supabaseUrl || !CONFIG.supabaseKey) return;
+  await fetch(`${CONFIG.supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { apikey: CONFIG.supabaseKey, Authorization: `Bearer ${CONFIG.supabaseKey}` }
+  });
+}
+
+// ── Shift ──────────────────────────────────────
+function setShift(s) {
+  currentShift = s;
+  ['morning','afternoon','night'].forEach(x => document.getElementById('btn-'+x).classList.toggle('active', x===s));
+  document.getElementById('na-section').style.display = s==='night' ? 'block' : 'none';
+}
+
+// ── Date ──────────────────────────────────────
+function computeDay(val) { if (!val) return ''; const d = new Date(val+'T12:00:00'); return DAYS[d.getDay()]; }
+function updateDay() {
+  const val = document.getElementById('report-date').value;
+  document.getElementById('computed-day').textContent = val ? '📅 ' + computeDay(val) : '';
+}
+
+// ── Occupancy ─────────────────────────────────
+function calcOcc() {
+  const rooms = parseInt(document.getElementById('totalrooms').value)||0;
+  const arr   = parseInt(document.getElementById('arrivals').value)||0;
+  const stay  = parseInt(document.getElementById('stayovers').value)||0;
+  const el = document.getElementById('occ-auto');
+  if (rooms>0) { const pct=Math.round((arr+stay)/rooms*100); el.textContent='→ Auto: '+pct+'%'; document.getElementById('occupancy').value=pct; }
+  else el.textContent='';
+}
+
+// ── Entries ───────────────────────────────────
+function renderIncidentBlocks() {
+  const c = document.getElementById('incident-blocks');
+  c.innerHTML = '';
+  BLOCKS.forEach((block, bi) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'expand-block';
+    if (bi>0) { const d=document.createElement('div'); d.className='divider'; wrap.appendChild(d); }
+    const hdr = document.createElement('div'); hdr.className='expand-header';
+    hdr.innerHTML='<span class="expand-label">'+block.emoji+' '+block.label+' <span class="req">●</span></span><span class="entry-count" id="count-'+block.key+'">0 entries</span>';
+    wrap.appendChild(hdr);
+    const list = document.createElement('div'); list.className='entries-list'; list.id='list-'+block.key;
+    wrap.appendChild(list);
+    const btn = document.createElement('button'); btn.className='add-entry-btn';
+    btn.innerHTML='<i class="ti ti-plus"></i> Add entry'; btn.onclick=()=>addEntry(block.key);
+    wrap.appendChild(btn);
+    c.appendChild(wrap);
+  });
+}
+function addEntry(key) { entries[key].push({}); refreshEntries(key); }
+function removeEntry(key, idx) { entries[key].splice(idx,1); refreshEntries(key); }
+function refreshEntries(key) {
+  const fields = key==='noshows' ? NOSHOW_FIELDS : BLOCKS.find(b=>b.key===key).fields;
+  const list   = document.getElementById('list-'+key);
+  const cEl    = document.getElementById('count-'+key);
+  if (!list) return;
+  list.innerHTML = '';
+  entries[key].forEach((entry,i) => {
+    const card = document.createElement('div'); card.className='entry-card';
+    const num  = document.createElement('div'); num.className='entry-num'; num.textContent='ENTRY #'+(i+1); card.appendChild(num);
+    const grid = document.createElement('div'); grid.className='entry-grid g'+Math.min(fields.length,3);
+    fields.forEach(f => {
+      const col=document.createElement('div');
+      const lbl=document.createElement('div'); lbl.className='entry-field-label'; lbl.textContent=f.label; col.appendChild(lbl);
+      let el;
+      if (f.type==='select') {
+        el=document.createElement('select');
+        (f.options||[]).forEach(o=>{const opt=document.createElement('option');opt.value=o;opt.textContent=o||'— select —';el.appendChild(opt);});
+        el.value=entry[f.name]||'';
+      } else { el=document.createElement('input'); el.type='text'; el.placeholder=f.label; el.value=entry[f.name]||''; }
+      el.addEventListener('change', e=>{ entries[key][i][f.name]=e.target.value; });
+      el.addEventListener('input',  e=>{ entries[key][i][f.name]=e.target.value; });
+      col.appendChild(el); grid.appendChild(col);
+    });
+    card.appendChild(grid);
+    const rm=document.createElement('button'); rm.className='remove-entry'; rm.innerHTML='<i class="ti ti-x"></i>';
+    rm.onclick=()=>removeEntry(key,i); card.appendChild(rm);
+    list.appendChild(card);
+  });
+  if (cEl) cEl.textContent=entries[key].length+(entries[key].length===1?' entry':' entries');
+}
+
+// ── Build report (clean plain-text format) ────
+function g(id) { return (document.getElementById(id)||{}).value||''; }
+
+function buildReport() {
+  const agent   = g('agent') || '—';
+  const dateVal = g('report-date');
+  const dayStr  = computeDay(dateVal);
+  const shiftLabels = { morning:'Morning | 7:00 AM to 3:00 PM', afternoon:'Afternoon | 3:00 PM to 11:00 PM', night:'Night Audit | 11:00 PM to 7:00 AM' };
+
+  // Format date as M/D/YYYY
+  let displayDate = dateVal;
+  if (dateVal) {
+    const d = new Date(dateVal+'T12:00:00');
+    displayDate = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
+  }
+
+  const L = []; // lines
+  const sep  = '─────────────────────────────';
+  const sep2 = '═════════════════════════════';
+
+  L.push(sep2);
+  L.push('SHIFT REPORT');
+  L.push(sep2);
+  L.push('');
+  L.push('Agent on duty  ' + agent);
+  L.push('Shift          ' + (shiftLabels[currentShift]||'—'));
+  L.push('Date           ' + displayDate + (dayStr ? '  (' + dayStr + ')' : ''));
+  L.push('');
+
+  // Comments
+  const comments = g('comments');
+  if (comments) {
+    L.push('COMMENTS');
+    L.push(sep);
+    L.push(comments);
+    L.push('');
+  }
+
+  // Incidents — only print sections with entries OR that have a count > 0
+  const hasAnyIncident = BLOCKS.some(b => entries[b.key].length > 0);
+  if (hasAnyIncident) {
+    L.push('INCIDENTS & TRANSACTIONS');
+    L.push(sep);
+
+    // CC Declined
+    if (entries.ccDeclined.length > 0) {
+      L.push('💳 CC Declined: ' + entries.ccDeclined.length);
+      entries.ccDeclined.forEach((e,i) => {
+        const rt = e.roomType ? ' — '+e.roomType : '';
+        L.push('   '+(i+1)+'. '+(e.guestName||'—')+' — '+(e.thirdParty||'—')+rt);
+      });
+    }
+
+    // Early checkout
+    if (entries.earlyCheckout.length > 0) {
+      L.push('🚪 Early Check-out: ' + entries.earlyCheckout.length);
+      entries.earlyCheckout.forEach((e,i) => L.push('   '+(i+1)+'. Room '+(e.room||'—')));
+    }
+
+    // Deposit to refund
+    if (entries.depositRefund.length > 0) {
+      L.push('💵 Deposit to Refund: ' + entries.depositRefund.length);
+      entries.depositRefund.forEach((e,i) => L.push('   '+(i+1)+'. '+(e.guestName||'—')+' — Conf# '+(e.confirmNum||'—')));
+    }
+
+    // Cancellation
+    if (entries.cancellation.length > 0) {
+      L.push('❌ Cancellation: ' + entries.cancellation.length);
+      entries.cancellation.forEach((e,i) => L.push('   '+(i+1)+'. '+(e.guestName||'—')+' — Conf# '+(e.confirmNum||'—')));
+    }
+
+    // Reservations
+    if (entries.reservations.length > 0) {
+      L.push('📝 Reservations Created: ' + entries.reservations.length);
+      entries.reservations.forEach((e,i) => L.push('   '+(i+1)+'. '+(e.guestName||'—')+' (Conf# '+(e.confirmNum||'—')+') — '+(e.thirdParty||'—')));
+    }
+
+    // Room moves
+    if (entries.roomMoves.length > 0) {
+      L.push('🔄 Room Moves: ' + entries.roomMoves.length);
+      entries.roomMoves.forEach((e,i) => L.push('   '+(i+1)+'. Room '+(e.fromRoom||'—')+' → '+(e.toRoom||'—')));
+    }
+
+    L.push('');
+  }
+
+  // Metrics
+  L.push('METRICS');
+  L.push(sep);
+  const fmt = (label, val, prefix, suffix) => label.padEnd(28) + (prefix||'') + (val||'0') + (suffix||'');
+  L.push(fmt('Walk-ins',               g('walkins')));
+  L.push(fmt('Wyndham Rewards Arr.',   g('wyndham')));
+  L.push(fmt('Day-use',                g('dayuse')));
+  L.push(fmt('Resort Pass',            g('resortpass')));
+  L.push(fmt('Vacant/Dirty Rooms',     g('vacantdirty')));
+  L.push(fmt('Out of Order',           g('outoforder')));
+  L.push(fmt('Total Rooms Available',  g('totalrooms')));
+  L.push(fmt('Total Arrivals Tonight', g('arrivals')));
+  L.push(fmt('Total Departures Today', g('departures')));
+  L.push(fmt('Stayovers',              g('stayovers')));
+  L.push(fmt("Today's Occupancy",      g('occupancy'), '', '%'));
+  L.push(fmt('Expected ADR',           (parseFloat(g('adr'))||0).toFixed(2), '$'));
+  L.push(fmt("Today's Rate",           (parseFloat(g('todayrate'))||0).toFixed(2), '$'));
+
+  // No-shows (NA only)
+  if (currentShift==='night' && entries.noshows.length>0) {
+    L.push('');
+    L.push('NO-SHOWS: ' + entries.noshows.length);
+    L.push(sep);
+    entries.noshows.forEach((e,i) => L.push('   '+(i+1)+'. '+(e.guestName||'—')+' — Room '+(e.room||'—')+' — Conf# '+(e.confirmNum||'—')));
+  }
+
+  L.push('');
+  L.push(sep2);
+
+  return L.join('\n');
+}
+
+function buildData() {
+  return { agent:g('agent'), shift:currentShift, date:g('report-date'), comments:g('comments'), ccDeclined:entries.ccDeclined, earlyCheckout:entries.earlyCheckout, depositRefund:entries.depositRefund, cancellation:entries.cancellation, reservations:entries.reservations, roomMoves:entries.roomMoves, noshows:entries.noshows, metrics:{ walkins:g('walkins'),wyndham:g('wyndham'),dayuse:g('dayuse'),resortpass:g('resortpass'),vacantdirty:g('vacantdirty'),outoforder:g('outoforder'),totalrooms:g('totalrooms'),arrivals:g('arrivals'),departures:g('departures'),stayovers:g('stayovers'),occupancy:g('occupancy'),adr:g('adr'),todayrate:g('todayrate') } };
+}
+
+// ── Copy ───────────────────────────────────────
+async function copyReport() {
+  const text = buildReport();
+  const data = buildData();
+  const saved = await saveToSupabase(text, data);
+  // Local fallback
+  const local = JSON.parse(localStorage.getItem('reports_local')||'[]');
+  local.unshift({ id:Date.now(), savedAt:new Date().toLocaleString(), text, ...data });
+  if (local.length>80) local.pop();
+  localStorage.setItem('reports_local', JSON.stringify(local));
+  try { await navigator.clipboard.writeText(text); }
+  catch { const ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+  showToast(saved ? '✅ Copied & saved to database!' : '✅ Copied! (saved locally)', 'success');
+}
+
+// ── Reset ──────────────────────────────────────
+function confirmReset() {
+  if (!confirm('Clear all fields? This cannot be undone.')) return;
+  ['agent','comments','walkins','wyndham','dayuse','resortpass','vacantdirty','outoforder','totalrooms','arrivals','departures','stayovers','occupancy','adr','todayrate'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('occ-auto').textContent='';
+  document.getElementById('report-date').value = new Date().toISOString().split('T')[0];
+  updateDay();
+  Object.keys(entries).forEach(k=>{ entries[k]=[]; });
+  renderIncidentBlocks(); refreshEntries('noshows');
+  setShift('morning');
+  showToast('🔄 Form cleared', 'success');
+}
+
+// ── History ────────────────────────────────────
+async function openHistory() {
+  const body = document.getElementById('drawer-body');
+  body.innerHTML='<div class="empty-state"><i class="ti ti-loader" style="font-size:24px;display:block;margin-bottom:8px;opacity:0.4"></i>Loading…</div>';
+  document.getElementById('drawer-overlay').classList.add('open');
+  let records = await loadFromSupabase();
+  const useSB = records !== null;
+  if (!records) records = (JSON.parse(localStorage.getItem('reports_local')||'[]')).map(r=>({id:r.id,agent:r.agent,shift:r.shift,report_date:r.date,full_text:r.text,created_at:r.savedAt}));
+  body.innerHTML='';
+  if (!records.length) { body.innerHTML='<div class="empty-state"><i class="ti ti-clipboard-x"></i>No reports found</div>'; return; }
+  if (!useSB) { const n=document.createElement('p'); n.style.cssText='font-size:11px;color:var(--text-muted);margin-bottom:12px;padding:8px;background:var(--bg-secondary);border-radius:6px'; n.textContent='⚠️ Showing local history — Supabase not connected.'; body.appendChild(n); }
+  records.forEach(r => {
+    const sl={morning:'🌅 Morning',afternoon:'☀️ Afternoon',night:'🌙 Night Audit'}[r.shift]||r.shift;
+    const el=document.createElement('div'); el.className='history-item';
+    el.innerHTML='<div class="hi-top"><div><div class="hi-name">'+(r.agent||'Unknown')+'</div><div class="hi-shift">'+sl+' · '+(r.report_date||'—')+'</div></div><div class="hi-date">'+(r.created_at?new Date(r.created_at).toLocaleDateString():'—')+'</div></div><div class="hi-preview">'+(r.full_text||'').substring(0,200)+'…</div><div class="hi-actions"><button class="hi-btn" onclick="copyHist(this)" data-text="'+encodeURIComponent(r.full_text||'')+'"><i class="ti ti-copy"></i> Copy</button><button class="hi-btn del" onclick="deleteHist(\''+r.id+'\','+useSB+',this)"><i class="ti ti-trash"></i> Delete</button></div>';
+    body.appendChild(el);
+  });
+}
+function copyHist(btn) { const t=decodeURIComponent(btn.getAttribute('data-text')); navigator.clipboard.writeText(t).then(()=>showToast('✅ Copied!','success')); }
+async function deleteHist(id, useSB, btn) {
+  if (!confirm('Delete this report?')) return;
+  if (useSB) await deleteFromSupabase(id);
+  else { let l=JSON.parse(localStorage.getItem('reports_local')||'[]'); l=l.filter(r=>String(r.id)!==String(id)); localStorage.setItem('reports_local',JSON.stringify(l)); }
+  btn.closest('.history-item').remove();
+  showToast('🗑️ Deleted','success');
+}
+function closeHistory() { document.getElementById('drawer-overlay').classList.remove('open'); }
+function overlayClick(e) { if(e.target===document.getElementById('drawer-overlay')) closeHistory(); }
+
+// ── Toast ──────────────────────────────────────
+let toastTimer;
+function showToast(msg, type='success') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type+' show';
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>
